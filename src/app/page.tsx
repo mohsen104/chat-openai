@@ -18,6 +18,7 @@ import Link from "next/link";
 const formSchema = z.object({
   message: z
     .string()
+    .trim()
     .min(1, { message: "Message cannot be empty." })
     .max(500, { message: "Max length is 500 characters." }),
 });
@@ -73,7 +74,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#212121] text-white pt-16 pb-24">
+    <div className="flex flex-col h-screen bg-[#212121] text-white pt-0 md:pt-16 pb-24">
       <div className="flex-1 overflow-y-auto px-4 py-8 max-w-3xl mx-auto w-full space-y-4">
         {messages.map((m) => (
           <div
@@ -109,9 +110,9 @@ export default function ChatPage() {
             messages.length ? "bottom-5" : "top-1/2 -translate-y-1/2"
           )}>
           {!messages.length && (
-            <h1 className="text-3xl">What’s on the agenda today?</h1>
+            <h1 className="text-lg md:text-3xl">What’s on the agenda today?</h1>
           )}
-          <div className="flex items-end gap-3 w-full pt-10 pb-4">
+          <div className="flex items-end gap-3 w-full pt-6 md:pt-10 pb-4">
             <FormField
               control={form.control}
               name="message"
@@ -129,7 +130,7 @@ export default function ChatPage() {
                           form.handleSubmit(onSubmit)();
                         }
                       }}
-                      className="min-h-12 max-h-40 rounded-2xl resize-none field-sizing-content overflow-y-auto bg-[#303030] border-0 py-2 px-4"
+                      className="min-h-12 max-h-40 rounded-2xl !text-base resize-none field-sizing-content overflow-y-auto bg-[#303030] border-0 py-2 px-4"
                     />
                   </FormControl>
                 </FormItem>
@@ -137,7 +138,7 @@ export default function ChatPage() {
             />
             <Button
               type="submit"
-              className="size-12 rounded-full flex items-center justify-center transition-all shadow-md bg-[#303030] cursor-pointer"
+              className="size-12 rounded-2xl flex items-center justify-center transition-all shadow-md bg-[#303030] cursor-pointer"
               disabled={isTyping}>
               <ArrowRight className="size-5" />
             </Button>
