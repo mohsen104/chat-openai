@@ -97,8 +97,9 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #303030;
+  background: #212121;
   border-radius: 10px;
+  border: #303030 2px solid;
 }
 
 ::-webkit-scrollbar-thumb:hover {

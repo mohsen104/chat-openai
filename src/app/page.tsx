@@ -130,7 +130,7 @@ export default function ChatPage() {
                           form.handleSubmit(onSubmit)();
                         }
                       }}
-                      className="min-h-12 max-h-40 rounded-2xl !text-base resize-none field-sizing-content overflow-y-auto bg-[#303030] border-0 py-2 px-4"
+                      className="min-h-[1lh] max-h-[10lh] rounded-2xl !text-base resize-none field-sizing-content overflow-y-auto bg-[#303030] border-0 py-2 px-4"
                     />
                   </FormControl>
                 </FormItem>
