@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -10,19 +9,41 @@ export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
 
-    const completion = await openai.chat.completions.create({
+    const stream = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages,
+      stream: true,
     });
 
-    return NextResponse.json({
-      reply: completion.choices[0].message,
+    const encoder = new TextEncoder();
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of stream) {
+            const delta = chunk.choices[0]?.delta?.content;
+            if (delta) {
+              controller.enqueue(encoder.encode(delta));
+            }
+          }
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(readable, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+        "X-Content-Type-Options": "nosniff",
+      },
     });
   } catch (error) {
     console.error(error);
-    return NextResponse.json(
-      { error: "Failed to fetch response" },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: "Failed to fetch response" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
