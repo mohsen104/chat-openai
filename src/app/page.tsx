@@ -270,7 +270,7 @@ export default function ChatPage() {
             </div>
           </div>
         ) : (
-          <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+          <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -293,9 +293,7 @@ export default function ChatPage() {
                     <TypingIndicator />
                   ) : message.role === "assistant" ? (
                     <>
-                      <div
-                        dir="auto"
-                        className="prose prose-invert prose-sm max-w-none ">
+                      <div className="prose prose-invert prose-sm max-w-none ">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
                           rehypePlugins={[rehypeHighlight]}
@@ -416,14 +414,14 @@ export default function ChatPage() {
       </div>
 
       {error && (
-        <div className="mx-auto mb-2 max-w-2xl w-full px-4">
+        <div className="mx-auto mb-2 max-w-3xl w-full px-4">
           <p className="text-sm text-red-400 bg-red-950/40 border border-red-800/50 rounded-lg px-3 py-2">
             {error}
           </p>
         </div>
       )}
 
-      <div className="px-4 pb-4 pt-2 max-w-2xl mx-auto w-full">
+      <div className="px-4 pb-4 pt-2 max-w-3xl mx-auto w-full">
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="flex items-end gap-2 bg-[#2f2f2f] rounded-2xl px-4 py-3 border border-gray-600/50 focus-within:border-gray-500 transition-colors">
@@ -440,7 +438,6 @@ export default function ChatPage() {
             disabled={isStreaming}
             onKeyDown={handleKeyDown}
             className="flex-1 min-h-7 bg-transparent resize-none outline-none text-sm text-gray-100 placeholder-gray-500 leading-6 max-h-[200px] overflow-y-auto disabled:opacity-50"
-            style={{ direction: "rtl" }}
           />
 
           {isStreaming ? (

@@ -134,3 +134,7 @@ pre {
 thead {
   direction: auto;
 }
+
+button {
+  cursor: pointer;
+}
