@@ -1,0 +1,69 @@
+@font-face {
+  font-family: "Manrope";
+  unicode-range: U+0000-00FF;
+  font-style: normal;
+  font-weight: 200;
+  src:
+    url("woff/Manrope-ExtraLight.woff") format("woff"),
+    url("woff2/Manrope-ExtraLight.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  unicode-range: U+0000-00FF;
+  font-style: normal;
+  font-weight: 300;
+  src:
+    url("woff/Manrope-Light.woff") format("woff"),
+    url("woff2/Manrope-Light.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  unicode-range: U+0000-00FF;
+  font-style: normal;
+  font-weight: 400;
+  src:
+    url("woff/Manrope-Regular.woff") format("woff"),
+    url("woff2/Manrope-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  unicode-range: U+0000-00FF;
+  font-style: normal;
+  font-weight: 500;
+  src:
+    url("woff/Manrope-Medium.woff") format("woff"),
+    url("woff2/Manrope-Medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  unicode-range: U+0000-00FF;
+  font-style: normal;
+  font-weight: 600;
+  src:
+    url("woff/Manrope-SemiBold.woff") format("woff"),
+    url("woff2/Manrope-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  unicode-range: U+0000-00FF;
+  font-style: normal;
+  font-weight: 700;
+  src:
+    url("woff/Manrope-Bold.woff") format("woff"),
+    url("woff2/Manrope-Bold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Manrope";
+  unicode-range: U+0000-00FF;
+  font-style: normal;
+  font-weight: 800;
+  src:
+    url("woff/Manrope-ExtraBold.woff") format("woff"),
+    url("woff2/Manrope-ExtraBold.woff2") format("woff2");
+}
