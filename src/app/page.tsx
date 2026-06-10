@@ -2,7 +2,13 @@
 
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
-import { useEffect, useRef, useState, useCallback } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useDeferredValue,
+} from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,9 +24,7 @@ interface Message {
   content: string;
 }
 
-const schema = z.object({
-  prompt: z.string().min(1),
-});
+const schema = z.object({ prompt: z.string().min(1) });
 type FormValues = z.infer<typeof schema>;
 
 const SUGGESTIONS = [
@@ -46,18 +50,14 @@ function TypingIndicator() {
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <button
-      onClick={handleCopy}
-      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-gray-200"
-      aria-label="Copy message">
+      onClick={async () => {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+      className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-gray-200"aria-label="Copy message">
       {copied ? <Check size={14} /> : <Copy size={14} />}
     </button>
   );
@@ -65,16 +65,13 @@ function CopyButton({ text }: { text: string }) {
 
 function CodeCopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <button
-      onClick={handleCopy}
+      onClick={async () => {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
       className="flex items-center gap-1.5 text-[11px] font-mono text-gray-400 hover:text-gray-100 transition-colors px-2 py-1 rounded-md hover:bg-gray-700/60 border border-transparent hover:border-gray-600/50"
       aria-label="Copy code">
       {copied ? (
@@ -92,6 +89,90 @@ function CodeCopyButton({ text }: { text: string }) {
   );
 }
 
+// ─── Assistant bubble با useDeferredValue ────────────────────────────────────
+// content: مقدار واقعی (hot) که سریع آپدیت می‌شه
+// deferredContent: نسخه‌ای که React در فرصت مناسب رندر می‌کنه (non-blocking)
+function AssistantMessage({ content }: { content: string }) {
+  const deferredContent = useDeferredValue(content);
+  const isStale = deferredContent !== content;
+
+  return (
+    <div
+      className="prose prose-invert prose-sm max-w-none"
+      style={{ opacity: isStale ? 0.85 : 1, transition: "opacity 0.1s" }}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeHighlight]}
+        components={{
+          code({
+            className,
+            children,
+            ...props
+          }: React.ComponentPropsWithoutRef<"code"> & { inline?: boolean }) {
+            const isInline = !className?.includes("language-");
+            const language = className?.replace("language-", "") ?? "";
+            const codeText = String(children).replace(/\n$/, "");
+
+            if (isInline) {
+              return (
+                <code
+                  className="px-1.5 py-0.5 rounded-md text-[0.82em] font-mono bg-gray-800/80 text-emerald-300 border border-gray-700/60"
+                  {...props}>
+                  {children}
+                </code>
+              );
+            }
+
+            return (
+              <div className="group/code mb-2 rounded-xl overflow-hidden border border-gray-700/50 bg-[#0d1117]">
+                <div className="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-gray-700/50">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-red-500/70" />
+                    <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
+                    <span className="w-3 h-3 rounded-full bg-green-500/70" />
+                    {language && (
+                      <span className="ml-2 mt-1.5 text-[11px] font-mono text-gray-400 uppercase tracking-widest">
+                        {language}
+                      </span>
+                    )}
+                  </div>
+                  <CodeCopyButton text={codeText} />
+                </div>
+                <div className="overflow-x-auto">
+                  <code
+                    className={`${className} block p-4 text-[13px] font-mono leading-relaxed text-gray-200`}
+                    {...props}>
+                    {children}
+                  </code>
+                </div>
+              </div>
+            );
+          },
+          table: ({ children }) => (
+            <div className="my-4 overflow-x-auto">
+              <table className="w-full text-sm">{children}</table>
+            </div>
+          ),
+          th: ({ children }) => (
+            <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-700">
+              {children}
+            </th>
+          ),
+          tr: ({ children }) => (
+            <tr className="border-b border-gray-800 hover:bg-gray-800/40 transition-colors">
+              {children}
+            </tr>
+          ),
+          td: ({ children }) => (
+            <td className="px-4 py-3 text-gray-300">{children}</td>
+          ),
+        }}>
+        {deferredContent}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -103,11 +184,34 @@ export default function ChatPage() {
   const userScrolledRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { register, handleSubmit, reset, setValue, watch } =
-    useForm<FormValues>({
-      resolver: zodResolver(schema),
-      defaultValues: { prompt: "" },
-    });
+  // ─── Chunk buffering refs ────────────────────────────────────────────────
+  // به جای setState per-chunk، متن را در ref جمع می‌کنیم
+  // و با rAF به صورت batched فلاش می‌کنیم
+  const streamBufferRef = useRef("");
+  const rafIdRef = useRef<number | null>(null);
+  const activeAssistantIdRef = useRef<string | null>(null);
+
+  const flushBuffer = useCallback(() => {
+    rafIdRef.current = null;
+    const buffered = streamBufferRef.current;
+    const id = activeAssistantIdRef.current;
+    if (!buffered || !id) return;
+    streamBufferRef.current = "";
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, content: m.content + buffered } : m))
+    );
+  }, []);
+
+  const scheduleFlush = useCallback(() => {
+    if (rafIdRef.current === null) {
+      rafIdRef.current = requestAnimationFrame(flushBuffer);
+    }
+  }, [flushBuffer]);
+
+  const { register, handleSubmit, reset, setValue, watch } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { prompt: "" },
+  });
 
   const promptValue = watch("prompt");
 
@@ -120,44 +224,37 @@ export default function ChatPage() {
 
   const scrollToBottom = useCallback(() => {
     if (!userScrolledRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });}
   }, []);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
-
-  useEffect(() => {
-    if (isStreaming) scrollToBottom();
-  }, [isStreaming, scrollToBottom]);
+  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
+  useEffect(() => { if (isStreaming) scrollToBottom(); }, [isStreaming, scrollToBottom]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 60;
-      userScrolledRef.current = !isAtBottom;
+      userScrolledRef.current = scrollHeight - scrollTop - clientHeight >= 60;
     };
-
     container.addEventListener("scroll", handleScroll, { passive: true });
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
   const stopGeneration = () => {
     abortControllerRef.current?.abort();
-    setIsStreaming(false);
-  };
+    // فلاش فوری قبل از توقف
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);flushBuffer();
+    }
+    setIsStreaming(false);};
 
   const startNewChat = () => {
     stopGeneration();
     setMessages([]);
     setError(null);
     reset();
-    textareaRef.current?.focus();
-  };
+    textareaRef.current?.focus();};
 
   const onSubmit = async ({ prompt }: FormValues) => {
     if (isStreaming) return;
@@ -174,18 +271,16 @@ export default function ChatPage() {
     reset();
     userScrolledRef.current = false;
 
-    const apiMessages = updatedMessages.map(({ role, content }) => ({
-      role,
-      content,
-    }));
-
+    const apiMessages = updatedMessages.map(({ role, content }) => ({ role, content }));
     const assistantId = crypto.randomUUID();
-    setMessages((prev) => [
-      ...prev,
-      { id: assistantId, role: "assistant", content: "" },
-    ]);
 
+    // ─── init refs برای stream جدید ──────────────────────────────────────
+    activeAssistantIdRef.current = assistantId;
+    streamBufferRef.current = "";
+
+    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
     setIsStreaming(true);
+
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -206,21 +301,29 @@ export default function ChatPage() {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, content: m.content + chunk } : m,
-          ),
-        );
+        // ─── Chunk + Flush: انباشتن در ref، فلاش با rAF ────────────────
+        streamBufferRef.current += decoder.decode(value, { stream: true });
+        scheduleFlush();
       }
+
+      // فلاش نهایی هر چیزی که باقی مانده
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      flushBuffer();
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === "AbortError") {
-      } else {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      if (!(err instanceof Error && err.name === "AbortError")) {
         setError("مشکلی پیش آمد. دوباره امتحان کن.");
         setMessages((prev) => prev.filter((m) => m.id !== assistantId));
       }
     } finally {
+      activeAssistantIdRef.current = null;
+      streamBufferRef.current = "";
       setIsStreaming(false);
       abortControllerRef.current = null;
     }
@@ -252,17 +355,12 @@ export default function ChatPage() {
       <div ref={containerRef} className="flex-1 overflow-y-auto">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full gap-6 px-4">
-            <h1 className="text-2xl font-semibold text-gray-200">
-              چطور می‌تونم کمک کنم؟
-            </h1>
+            <h1 className="text-2xl font-semibold text-gray-200">چطور می‌تونم کمک کنم؟</h1>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
-                  onClick={() => {
-                    setValue("prompt", s);
-                    textareaRef.current?.focus();
-                  }}
+                  onClick={() => { setValue("prompt", s); textareaRef.current?.focus(); }}
                   className="cursor-pointer text-sm text-right px-4 py-3 rounded-xl border border-gray-600 hover:border-gray-400 hover:bg-gray-700/50 transition-colors text-gray-300">
                   {s}
                 </button>
@@ -274,9 +372,7 @@ export default function ChatPage() {
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={`flex gap-3 group ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}>
+                className={`flex gap-3 group ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                 {message.role === "assistant" && (
                   <div className="size-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <Bot size={20} className="text-white" />
@@ -285,118 +381,20 @@ export default function ChatPage() {
 
                 <div
                   className={`relative max-w-[85%] ${
-                    message.role === "user"
-                      ? "bg-[#2f2f2f] rounded-2xl px-4 py-2.5"
-                      : "text-gray-100"
+                    message.role === "user" ? "bg-[#2f2f2f] rounded-2xl px-4 py-2.5" : "text-gray-100"
                   }`}>
                   {message.role === "assistant" && message.content === "" ? (
                     <TypingIndicator />
                   ) : message.role === "assistant" ? (
                     <>
-                      <div className="prose prose-invert prose-sm max-w-none ">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeHighlight]}
-                          components={{
-                            code({
-                              className,
-                              children,
-                              ...props
-                            }: React.ComponentPropsWithoutRef<"code"> & {
-                              inline?: boolean;
-                            }) {
-                              const isInline =
-                                !className?.includes("language-");
-                              const language =
-                                className?.replace("language-", "") ?? "";
-                              const codeText = String(children).replace(
-                                /\n$/,
-                                "",
-                              );
-
-                              if (isInline) {
-                                return (
-                                  <code
-                                    className="px-1.5 py-0.5 rounded-md text-[0.82em] font-mono bg-gray-800/80 text-emerald-300 border border-gray-700/60"
-                                    {...props}>
-                                    {children}
-                                  </code>
-                                );
-                              }
-
-                              return (
-                                <div className="group/code mb-2 rounded-xl overflow-hidden border border-gray-700/50 bg-[#0d1117]">
-                                  <div className="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-gray-700/50">
-                                    <div className="flex items-center gap-2">
-                                      <span className="w-3 h-3 rounded-full bg-red-500/70" />
-                                      <span className="w-3 h-3 rounded-full bg-yellow-500/70" />
-                                      <span className="w-3 h-3 rounded-full bg-green-500/70" />
-                                      {language && (
-                                        <span className="ml-2 mt-1.5 text-[11px] font-mono text-gray-400 uppercase tracking-widest">
-                                          {language}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <CodeCopyButton text={codeText} />
-                                  </div>
-                                  <div className="overflow-x-auto">
-                                    <code
-                                      className={`${className} block p-4 text-[13px] font-mono leading-relaxed text-gray-200`}
-                                      {...props}>
-                                      {children}
-                                    </code>
-                                  </div>
-                                </div>
-                              );
-                            },
-                            table({ children }) {
-                              return (
-                                <div className="my-4 overflow-x-auto">
-                                  <table className="w-full text-sm">
-                                    {children}
-                                  </table>
-                                </div>
-                              );
-                            },
-                            thead({ children }) {
-                              return <thead>{children}</thead>;
-                            },
-                            th({ children }) {
-                              return (
-                                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-700">
-                                  {children}
-                                </th>
-                              );
-                            },
-                            tbody({ children }) {
-                              return <tbody>{children}</tbody>;
-                            },
-                            tr({ children }) {
-                              return (
-                                <tr className="border-b border-gray-800 hover:bg-gray-800/40 transition-colors">
-                                  {children}
-                                </tr>
-                              );
-                            },
-                            td({ children }) {
-                              return (
-                                <td className="px-4 py-3 text-gray-300">
-                                  {children}
-                                </td>
-                              );
-                            },
-                          }}>
-                          {message.content}
-                        </ReactMarkdown>
-                      </div>
+                      {/* ─── useDeferredValue داخل AssistantMessage ─── */}
+                      <AssistantMessage content={message.content} />
                       <div className="flex justify-end mt-1">
                         <CopyButton text={message.content} />
                       </div>
                     </>
                   ) : (
-                    <p className="text-sm whitespace-pre-wrap">
-                      {message.content}
-                    </p>
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                   )}
                 </div>
 
@@ -406,9 +404,7 @@ export default function ChatPage() {
                   </div>
                 )}
               </div>
-            ))}
-
-            <div ref={bottomRef} />
+            ))}<div ref={bottomRef} />
           </div>
         )}
       </div>
@@ -429,16 +425,13 @@ export default function ChatPage() {
             {...register("prompt")}
             ref={(el) => {
               register("prompt").ref(el);
-              (
-                textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>
-              ).current = el;
+              (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
             }}
             rows={1}
             placeholder="پیامی بنویس..."
             disabled={isStreaming}
             onKeyDown={handleKeyDown}
-            className="flex-1 min-h-7 bg-transparent resize-none outline-none text-sm text-gray-100 placeholder-gray-500 leading-6 max-h-[200px] overflow-y-auto disabled:opacity-50"
-          />
+            className="flex-1 min-h-7 bg-transparent resize-none outline-none text-sm text-gray-100 placeholder-gray-500 leading-6 max-h-[200px] overflow-y-auto disabled:opacity-50"/>
 
           {isStreaming ? (
             <button
